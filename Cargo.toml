@@ -1,0 +1,30 @@
+[package]
+name = "cmcp"
+version = "0.1.0"
+edition = "2021"
+description = "curl for MCP — one-shot CLI to invoke MCP tools, reusing your Agent configs"
+license = "Apache-2.0"
+
+[[bin]]
+name = "cmcp"
+path = "src/main.rs"
+
+[dependencies]
+rmcp = { version = "1.4", features = [
+    "client",
+    "transport-child-process",
+    "transport-streamable-http-client-reqwest",
+] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "time", "signal"] }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+anyhow = "1"
+dirs = "5"
+url = "2"
+
+[dev-dependencies]
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"
