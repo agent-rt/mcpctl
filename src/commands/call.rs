@@ -4,7 +4,7 @@ use rmcp::model::CallToolRequestParams;
 use serde_json::{Map, Value};
 
 use crate::cli::CallArgs;
-use crate::config::{load_all, ServerId};
+use crate::config::{apply_override, load_all, ServerId};
 use crate::error::{CmcpError, Result};
 use crate::output::print_call_result;
 use crate::session;
@@ -51,8 +51,9 @@ pub fn parse_uri(uri: &str) -> Result<Invocation> {
 
 pub fn merge_args(args: &CallArgs) -> Result<Map<String, Value>> {
     let mut base: Map<String, Value> = match &args.args_json {
-        Some(s) => {
-            let v: Value = serde_json::from_str(s).map_err(|e| CmcpError::InvalidArg {
+        Some(raw) => {
+            let body = read_args_json_source(raw)?;
+            let v: Value = serde_json::from_str(&body).map_err(|e| CmcpError::InvalidArg {
                 arg: "--args-json".into(),
                 reason: e.to_string(),
             })?;
@@ -89,6 +90,30 @@ pub fn merge_args(args: &CallArgs) -> Result<Map<String, Value>> {
     Ok(base)
 }
 
+/// Resolve the `--args-json` argument:
+/// - `@path` → read that file
+/// - `-`     → read stdin to EOF
+/// - anything else → treat as inline JSON
+fn read_args_json_source(raw: &str) -> Result<String> {
+    if raw == "-" {
+        let mut buf = String::new();
+        std::io::Read::read_to_string(&mut std::io::stdin(), &mut buf).map_err(|e| {
+            CmcpError::InvalidArg {
+                arg: "--args-json -".into(),
+                reason: format!("failed reading stdin: {e}"),
+            }
+        })?;
+        return Ok(buf);
+    }
+    if let Some(path) = raw.strip_prefix('@') {
+        return std::fs::read_to_string(path).map_err(|e| CmcpError::InvalidArg {
+            arg: format!("--args-json @{path}"),
+            reason: format!("failed reading file: {e}"),
+        });
+    }
+    Ok(raw.to_string())
+}
+
 fn value_type(v: &Value) -> &'static str {
     match v {
         Value::Null => "null",
@@ -100,20 +125,25 @@ fn value_type(v: &Value) -> &'static str {
     }
 }
 
-pub async fn run(uri: &str, args: CallArgs, verbose: bool) -> Result<()> {
+pub async fn run(
+    uri: &str,
+    args: CallArgs,
+    json: bool,
+    verbose: bool,
+    override_cmd: Option<&str>,
+) -> Result<()> {
     let inv = parse_uri(uri)?;
     let arguments = merge_args(&args)?;
 
     let servers = load_all()?;
     let cfg = servers
         .get(&inv.server)
+        .map(|r| &r.active)
         .ok_or_else(|| CmcpError::ServerNotFound(inv.server.clone()))?;
+    let cfg = apply_override(cfg, override_cmd)?;
 
     let timeout = Duration::from_secs(args.timeout);
-    let session = match tokio::time::timeout(timeout, session::connect(cfg, verbose)).await {
-        Ok(s) => s?,
-        Err(_) => return Err(CmcpError::Timeout(args.timeout)),
-    };
+    let session = session::connect_with_retry(&cfg, verbose, timeout, args.retry).await?;
 
     let mut params = CallToolRequestParams::new(inv.tool.clone());
     if !arguments.is_empty() {
@@ -123,7 +153,7 @@ pub async fn run(uri: &str, args: CallArgs, verbose: bool) -> Result<()> {
     let result = session::call_tool(&session, params, timeout).await;
     session::close(session).await;
     let result = result?;
-    print_call_result(&result, args.json);
+    print_call_result(&result, json, args.structured);
     if result.is_error == Some(true) {
         return Err(CmcpError::Service(format!(
             "tool '{}' returned is_error=true",
@@ -183,5 +213,37 @@ mod tests {
             ..Default::default()
         };
         assert!(merge_args(&args).is_err());
+    }
+
+    #[test]
+    fn args_json_from_file() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), r#"{"q": "from-file"}"#).unwrap();
+        let args = CallArgs {
+            args_json: Some(format!("@{}", tmp.path().display())),
+            ..Default::default()
+        };
+        let m = merge_args(&args).unwrap();
+        assert_eq!(m["q"], Value::String("from-file".into()));
+    }
+
+    #[test]
+    fn args_json_file_missing_returns_invalid_arg() {
+        let args = CallArgs {
+            args_json: Some("@/no/such/path.json".into()),
+            ..Default::default()
+        };
+        let err = merge_args(&args).unwrap_err();
+        assert!(matches!(err, CmcpError::InvalidArg { .. }));
+    }
+
+    #[test]
+    fn args_json_bare_string_parsed_inline() {
+        let args = CallArgs {
+            args_json: Some(r#"{"k":1}"#.into()),
+            ..Default::default()
+        };
+        let m = merge_args(&args).unwrap();
+        assert_eq!(m["k"], Value::Number(1.into()));
     }
 }

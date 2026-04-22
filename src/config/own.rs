@@ -1,4 +1,4 @@
-//! Read/write helpers for cmcp's own config at `~/.config/cmcp/mcp.json`.
+//! Read/write helpers for mcpctl's own config at `~/.config/mcpctl/mcp.json`.
 //!
 //! The file is a `{ "mcpServers": { name: {...} } }` JSON document, matching
 //! Claude Code's shape so users can hand-edit or copy entries around.
@@ -64,7 +64,7 @@ pub fn upsert(name: &str, server: RawServer, force: bool) -> Result<PathBuf> {
     if root.mcp_servers.contains_key(name) && !force {
         return Err(crate::error::CmcpError::InvalidArg {
             arg: name.to_string(),
-            reason: "already defined in cmcp config; pass --force to overwrite".into(),
+            reason: "already defined in mcpctl config; pass --force to overwrite".into(),
         });
     }
     root.mcp_servers.insert(name.to_string(), server);

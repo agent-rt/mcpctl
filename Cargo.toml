@@ -1,12 +1,12 @@
 [package]
-name = "cmcp"
+name = "mcpctl"
 version = "0.1.0"
 edition = "2021"
-description = "curl for MCP — one-shot CLI to invoke MCP tools, reusing your Agent configs"
+description = "the MCP control utility for AI agents"
 license = "Apache-2.0"
 
 [[bin]]
-name = "cmcp"
+name = "mcpctl"
 path = "src/main.rs"
 
 [dependencies]
@@ -23,6 +23,9 @@ thiserror = "1"
 anyhow = "1"
 dirs = "5"
 url = "2"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [dev-dependencies]
 tempfile = "3"

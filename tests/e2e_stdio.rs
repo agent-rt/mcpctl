@@ -38,8 +38,8 @@ fn setup_config() -> TempDir {
 }
 
 fn cmcp(dir: &TempDir) -> assert_cmd::Command {
-    let mut cmd = assert_cmd::Command::cargo_bin("cmcp").unwrap();
-    cmd.env("CMCP_CONFIG_DIR", dir.path());
+    let mut cmd = assert_cmd::Command::cargo_bin("mcpctl").unwrap();
+    cmd.env("MCPCTL_CONFIG_DIR", dir.path());
     cmd
 }
 
@@ -48,44 +48,45 @@ fn own_config_roundtrip_add_list_remove() {
     let dir = tempfile::tempdir().expect("tempdir");
 
     let run = |cmd: &mut assert_cmd::Command| {
-        cmd.env("CMCP_CONFIG_DIR", dir.path());
+        cmd.env("MCPCTL_CONFIG_DIR", dir.path());
     };
 
     // add
-    let mut c = assert_cmd::Command::cargo_bin("cmcp").unwrap();
+    let mut c = assert_cmd::Command::cargo_bin("mcpctl").unwrap();
     run(&mut c);
     c.args(["server", "add", "demo", "--command", "echo", "--arg", "hi"])
         .assert()
         .success();
 
-    // list shows it with source=cmcp
-    let mut c = assert_cmd::Command::cargo_bin("cmcp").unwrap();
+    // list shows it with source=mcpctl
+    let mut c = assert_cmd::Command::cargo_bin("mcpctl").unwrap();
     run(&mut c);
     c.args(["server", "list"])
         .assert()
         .success()
         .stdout(predicate::str::contains("demo"))
-        .stdout(predicate::str::contains("cmcp"));
+        .stdout(predicate::str::contains("mcpctl"));
 
     // duplicate without --force errors
-    let mut c = assert_cmd::Command::cargo_bin("cmcp").unwrap();
+    let mut c = assert_cmd::Command::cargo_bin("mcpctl").unwrap();
     run(&mut c);
     c.args(["server", "add", "demo", "--command", "echo"])
         .assert()
         .failure();
 
     // remove
-    let mut c = assert_cmd::Command::cargo_bin("cmcp").unwrap();
+    let mut c = assert_cmd::Command::cargo_bin("mcpctl").unwrap();
     run(&mut c);
     c.args(["server", "remove", "demo"]).assert().success();
 
-    // list empty
-    let mut c = assert_cmd::Command::cargo_bin("cmcp").unwrap();
+    // list empty — stdout is a pipe here so we're in TSV mode: empty input,
+    // empty output (no header, no framing).
+    let mut c = assert_cmd::Command::cargo_bin("mcpctl").unwrap();
     run(&mut c);
     c.args(["server", "list"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("no MCP servers"));
+        .stdout(predicate::str::is_empty());
 }
 
 #[test]
@@ -110,13 +111,13 @@ fn own_config_wins_over_claude_code() {
     )
     .unwrap();
 
-    let mut c = assert_cmd::Command::cargo_bin("cmcp").unwrap();
-    c.env("CMCP_CONFIG_DIR", dir.path())
+    let mut c = assert_cmd::Command::cargo_bin("mcpctl").unwrap();
+    c.env("MCPCTL_CONFIG_DIR", dir.path())
         .args(["server", "show", "shared"])
         .assert()
         .success()
         .stdout(predicate::str::contains("from-cmcp"))
-        .stdout(predicate::str::contains("source:      cmcp"));
+        .stdout(predicate::str::contains("source:      mcpctl"));
 }
 
 #[test]

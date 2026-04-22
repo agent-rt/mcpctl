@@ -30,11 +30,19 @@ pub enum CmcpError {
     #[error("tool call timed out after {0}s")]
     Timeout(u64),
 
+    #[error("stdio handshake timed out after {secs}s{tail}", tail = format_tail(.tail))]
+    HandshakeTimeout { secs: u64, tail: Option<String> },
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
+
+    /// Carrier for "command already printed its own error, just propagate the
+    /// exit code." main.rs checks for this and skips the `mcpctl: {err}` prefix.
+    #[error("")]
+    Silent(i32),
 }
 
 #[derive(Debug, Error)]
@@ -63,10 +71,20 @@ impl CmcpError {
             CmcpError::Config(_) | CmcpError::InvalidUri(_) | CmcpError::InvalidArg { .. } => 2,
             CmcpError::ServerNotFound(_) | CmcpError::Transport(_) => 3,
             CmcpError::ToolNotFound { .. } | CmcpError::Service(_) => 4,
-            CmcpError::Timeout(_) => 5,
+            CmcpError::Timeout(_) | CmcpError::HandshakeTimeout { .. } => 5,
             CmcpError::Io(_) | CmcpError::Json(_) => 1,
+            CmcpError::Silent(code) => *code,
         }
     }
 }
 
 pub type Result<T> = std::result::Result<T, CmcpError>;
+
+fn format_tail(tail: &Option<String>) -> String {
+    match tail {
+        Some(t) if !t.is_empty() => format!(
+            "\n--- last stderr lines ---\n{t}\nhint: rerun with -v/--verbose to stream server stderr"
+        ),
+        _ => "\nhint: rerun with -v/--verbose to stream server stderr".to_string(),
+    }
+}

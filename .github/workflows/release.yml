@@ -37,9 +37,9 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
-          NAME="cmcp-${VERSION}-${{ matrix.target }}"
+          NAME="mcpctl-${VERSION}-${{ matrix.target }}"
           mkdir -p "dist/${NAME}"
-          cp "target/${{ matrix.target }}/release/cmcp" "dist/${NAME}/"
+          cp "target/${{ matrix.target }}/release/mcpctl" "dist/${NAME}/"
           cp README.md "dist/${NAME}/"
           tar -C dist -czf "dist/${NAME}.tar.gz" "${NAME}"
           (cd dist && shasum -a 256 "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256")
