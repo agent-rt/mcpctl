@@ -34,6 +34,15 @@ pub async fn run(
 
     session::close(session).await;
 
-    print_introspect(server, &cfg, &tools, prompts.as_deref(), resources.as_deref(), signature, desc_chars, json);
+    print_introspect(
+        server,
+        &cfg,
+        &tools,
+        prompts.as_deref(),
+        resources.as_deref(),
+        signature,
+        desc_chars,
+        json,
+    );
     Ok(())
 }

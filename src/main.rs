@@ -41,7 +41,9 @@ async fn run(cli: Cli) -> Result<()> {
         Some(Cmd::Server { cmd }) => commands::server::run(cmd, json).await,
         Some(Cmd::Tool { cmd }) => commands::tool::run(cmd, json, verbose, override_cmd).await,
         Some(Cmd::Prompt { cmd }) => commands::prompt::run(cmd, json, verbose, override_cmd).await,
-        Some(Cmd::Resource { cmd }) => commands::resource::run(cmd, json, verbose, override_cmd).await,
+        Some(Cmd::Resource { cmd }) => {
+            commands::resource::run(cmd, json, verbose, override_cmd).await
+        }
         Some(Cmd::Config { cmd }) => commands::config_cmd::run(cmd, json),
         Some(Cmd::Call { uri, call }) => {
             commands::call::run(&uri, call, json, verbose, override_cmd).await
@@ -52,8 +54,16 @@ async fn run(cli: Cli) -> Result<()> {
             count,
             timeout,
         }) => {
-            commands::tail::run(&server, filters, count, timeout, json, verbose, override_cmd)
-                .await
+            commands::tail::run(
+                &server,
+                filters,
+                count,
+                timeout,
+                json,
+                verbose,
+                override_cmd,
+            )
+            .await
         }
         Some(Cmd::Introspect {
             server,
@@ -61,8 +71,16 @@ async fn run(cli: Cli) -> Result<()> {
             desc_chars,
             timeout,
         }) => {
-            commands::introspect::run(&server, json, signature, desc_chars, timeout, verbose, override_cmd)
-                .await
+            commands::introspect::run(
+                &server,
+                json,
+                signature,
+                desc_chars,
+                timeout,
+                verbose,
+                override_cmd,
+            )
+            .await
         }
         None => match cli.uri {
             Some(uri) => commands::call::run(&uri, cli.call, json, verbose, override_cmd).await,

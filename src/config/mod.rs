@@ -233,7 +233,10 @@ pub fn discovered_sources() -> Result<Vec<DiscoveredSource>> {
         (ConfigSource::ClaudeCode, home.join(".claude.json")),
         (ConfigSource::ClaudeDesktop, claude_desktop_path(&home)),
         (ConfigSource::Cursor, home.join(".cursor/mcp.json")),
-        (ConfigSource::Windsurf, home.join(".codeium/windsurf/mcp_config.json")),
+        (
+            ConfigSource::Windsurf,
+            home.join(".codeium/windsurf/mcp_config.json"),
+        ),
         (ConfigSource::Gemini, home.join(".gemini/settings.json")),
         (ConfigSource::Zed, zed_settings_path(&home)),
         (ConfigSource::Codex, home.join(".codex/config.toml")),

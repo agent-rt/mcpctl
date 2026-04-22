@@ -7,16 +7,30 @@ use crate::error::{CmcpError, Result};
 use crate::output::{print_tool_list, print_tool_show};
 use crate::session::{self, Session};
 
-pub async fn run(cmd: ToolCmd, json: bool, verbose: bool, override_cmd: Option<&str>) -> Result<()> {
+pub async fn run(
+    cmd: ToolCmd,
+    json: bool,
+    verbose: bool,
+    override_cmd: Option<&str>,
+) -> Result<()> {
     match cmd {
-        ToolCmd::List { server, timeout, desc_chars } => {
+        ToolCmd::List {
+            server,
+            timeout,
+            desc_chars,
+        } => {
             let session =
                 open(&server, Duration::from_secs(timeout), verbose, override_cmd).await?;
             let tools = session::list_tools(&session).await?;
             print_tool_list(&server, &tools, desc_chars, json);
             session::close(session).await;
         }
-        ToolCmd::Show { target, tool, signature, timeout } => {
+        ToolCmd::Show {
+            target,
+            tool,
+            signature,
+            timeout,
+        } => {
             let (server, tool_name) = resolve_show_target(target, tool)?;
             let session =
                 open(&server, Duration::from_secs(timeout), verbose, override_cmd).await?;

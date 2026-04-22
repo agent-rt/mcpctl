@@ -2,15 +2,16 @@ use std::collections::BTreeMap;
 use std::process::Command;
 
 use crate::cli::{ServerAddArgs, ServerCmd};
-use crate::config::{
-    self, load_all, own, ConfigSource, McpConfigRoot, RawServer, ServerId,
-};
+use crate::config::{self, load_all, own, ConfigSource, McpConfigRoot, RawServer, ServerId};
 use crate::error::{CmcpError, Result};
 use crate::output::{print_check, print_server_list, print_server_show, CheckRow, CheckStatus};
 
 pub async fn run(cmd: ServerCmd, json: bool) -> Result<()> {
     match cmd {
-        ServerCmd::List { probe, probe_timeout } => {
+        ServerCmd::List {
+            probe,
+            probe_timeout,
+        } => {
             if probe {
                 list_probe(json, probe_timeout).await
             } else {

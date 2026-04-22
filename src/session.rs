@@ -294,7 +294,10 @@ pub async fn list_prompts(session: &Session) -> Result<Vec<Prompt>> {
         .map_err(|e| CmcpError::Service(e.to_string()))
 }
 
-pub async fn get_prompt(session: &Session, params: GetPromptRequestParams) -> Result<GetPromptResult> {
+pub async fn get_prompt(
+    session: &Session,
+    params: GetPromptRequestParams,
+) -> Result<GetPromptResult> {
     session
         .inner
         .get_prompt(params)
@@ -310,7 +313,10 @@ pub async fn list_resources(session: &Session) -> Result<Vec<Resource>> {
         .map_err(|e| CmcpError::Service(e.to_string()))
 }
 
-pub async fn read_resource(session: &Session, params: ReadResourceRequestParams) -> Result<ReadResourceResult> {
+pub async fn read_resource(
+    session: &Session,
+    params: ReadResourceRequestParams,
+) -> Result<ReadResourceResult> {
     session
         .inner
         .read_resource(params)

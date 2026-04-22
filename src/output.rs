@@ -90,7 +90,9 @@ pub fn print_server_list(servers: &[&McpServerConfig], as_json: bool) {
         }
         Format::Pretty => {
             if servers.is_empty() {
-                println!("(no MCP servers found — run `mcpctl config sources` to check config paths)");
+                println!(
+                    "(no MCP servers found — run `mcpctl config sources` to check config paths)"
+                );
                 return;
             }
             println!("{:<24} {:<16} TRANSPORT", "SERVER", "SOURCE");
@@ -419,7 +421,10 @@ fn render_schema_type(prop: &serde_json::Value) -> String {
 
 pub fn print_tool_show(tool: &Tool, signature: bool, as_json: bool) {
     if signature {
-        println!("{}", render_signature(&tool.name, tool.input_schema.as_ref()));
+        println!(
+            "{}",
+            render_signature(&tool.name, tool.input_schema.as_ref())
+        );
         return;
     }
     if as_json {
@@ -613,8 +618,7 @@ pub fn print_tail_event(evt: &TailEvent, as_json: bool) {
         Format::Tsv | Format::Json => {
             // Format::Json not reachable here (as_json handled above); treat
             // both non-pretty branches as TSV to keep stream-ability.
-            let compact =
-                serde_json::to_string(&evt.payload).unwrap_or_else(|_| "null".into());
+            let compact = serde_json::to_string(&evt.payload).unwrap_or_else(|_| "null".into());
             println!("{}\t{}\t{}", ts, evt.kind.label(), tsv_field(&compact));
         }
         Format::Pretty => {
@@ -666,9 +670,9 @@ fn pretty_tail_summary(evt: &TailEvent) -> String {
             .get("requestId")
             .map(|v| serde_json::to_string(v).unwrap_or_default())
             .unwrap_or_default(),
-        TailKind::ResourceListChanged
-        | TailKind::ToolListChanged
-        | TailKind::PromptListChanged => String::new(),
+        TailKind::ResourceListChanged | TailKind::ToolListChanged | TailKind::PromptListChanged => {
+            String::new()
+        }
         TailKind::Custom => serde_json::to_string(&evt.payload).unwrap_or_default(),
     }
 }
@@ -724,16 +728,28 @@ pub fn print_introspect(
                 McpTransport::Stdio { command, .. } => json!({"type": "stdio", "command": command}),
                 McpTransport::Http { url, .. } => json!({"type": "http", "url": url}),
             };
-            let prompt_arr: Option<Vec<_>> = prompts.map(|ps| ps.iter().map(|p| json!({
-                "name": p.name,
-                "description": p.description,
-                "arguments": p.arguments.as_deref().unwrap_or(&[]).len(),
-            })).collect());
-            let resource_arr: Option<Vec<_>> = resources.map(|rs| rs.iter().map(|r| json!({
-                "uri": r.uri,
-                "name": r.name,
-                "mime_type": r.mime_type,
-            })).collect());
+            let prompt_arr: Option<Vec<_>> = prompts.map(|ps| {
+                ps.iter()
+                    .map(|p| {
+                        json!({
+                            "name": p.name,
+                            "description": p.description,
+                            "arguments": p.arguments.as_deref().unwrap_or(&[]).len(),
+                        })
+                    })
+                    .collect()
+            });
+            let resource_arr: Option<Vec<_>> = resources.map(|rs| {
+                rs.iter()
+                    .map(|r| {
+                        json!({
+                            "uri": r.uri,
+                            "name": r.name,
+                            "mime_type": r.mime_type,
+                        })
+                    })
+                    .collect()
+            });
             println!(
                 "{}",
                 serde_json::to_string_pretty(&json!({
@@ -758,7 +774,11 @@ pub fn print_introspect(
             }
             if let Some(ps) = prompts {
                 for p in ps {
-                    println!("prompt\t{}\t{}", tsv_field(&p.name), tsv_field(p.description.as_deref().unwrap_or("")));
+                    println!(
+                        "prompt\t{}\t{}",
+                        tsv_field(&p.name),
+                        tsv_field(p.description.as_deref().unwrap_or(""))
+                    );
                 }
             }
             if let Some(rs) = resources {
@@ -845,9 +865,7 @@ pub fn print_check(server: &str, rows: &[CheckRow<'_>], as_json: bool) {
                     })
                 })
                 .collect();
-            let ok = rows
-                .iter()
-                .all(|r| !matches!(r.status, CheckStatus::Error));
+            let ok = rows.iter().all(|r| !matches!(r.status, CheckStatus::Error));
             println!(
                 "{}",
                 serde_json::to_string_pretty(&json!({
@@ -874,17 +892,15 @@ pub fn print_check(server: &str, rows: &[CheckRow<'_>], as_json: bool) {
         Format::Pretty => {
             println!("server:      {server}");
             for r in rows {
-                let ms = r
-                    .ms
-                    .map(|m| format!("{m} ms"))
-                    .unwrap_or_else(|| "-".into());
+                let ms =
+                    r.ms.map(|m| format!("{m} ms"))
+                        .unwrap_or_else(|| "-".into());
                 let label = format!("{}:", r.stage);
                 match r.status {
                     CheckStatus::Ok => println!("{label:<12} {ms} — {}", r.detail),
-                    CheckStatus::Error => println!(
-                        "{label:<12} FAILED\n  {}",
-                        r.detail.replace('\n', "\n  ")
-                    ),
+                    CheckStatus::Error => {
+                        println!("{label:<12} FAILED\n  {}", r.detail.replace('\n', "\n  "))
+                    }
                     CheckStatus::Skipped => println!("{label:<12} skipped"),
                 }
             }
@@ -942,7 +958,10 @@ pub fn print_prompt_list(server: &str, prompts: &[Prompt], as_json: bool) {
 
 pub fn print_prompt_get(server: &str, prompt: &str, result: &GetPromptResult, as_json: bool) {
     if as_json {
-        println!("{}", serde_json::to_string_pretty(result).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(result).unwrap_or_default()
+        );
         return;
     }
     if std::io::stdout().is_terminal() {
@@ -1040,22 +1059,36 @@ pub fn print_resource_list(server: &str, resources: &[Resource], as_json: bool) 
 
 pub fn print_resource_read(server: &str, uri: &str, result: &ReadResourceResult, as_json: bool) {
     if as_json {
-        println!("{}", serde_json::to_string_pretty(result).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(result).unwrap_or_default()
+        );
         return;
     }
     for content in &result.contents {
         match content {
-            ResourceContents::TextResourceContents { text, mime_type, .. } => {
+            ResourceContents::TextResourceContents {
+                text, mime_type, ..
+            } => {
                 if std::io::stdout().is_terminal() {
-                    println!("# {server}/{uri} ({})", mime_type.as_deref().unwrap_or("text/plain"));
+                    println!(
+                        "# {server}/{uri} ({})",
+                        mime_type.as_deref().unwrap_or("text/plain")
+                    );
                     println!("{text}");
                 } else {
                     print!("{text}");
                 }
             }
-            ResourceContents::BlobResourceContents { blob, mime_type, .. } => {
+            ResourceContents::BlobResourceContents {
+                blob, mime_type, ..
+            } => {
                 if std::io::stdout().is_terminal() {
-                    println!("# {server}/{uri} ({}) — {} bytes base64", mime_type.as_deref().unwrap_or("application/octet-stream"), blob.len());
+                    println!(
+                        "# {server}/{uri} ({}) — {} bytes base64",
+                        mime_type.as_deref().unwrap_or("application/octet-stream"),
+                        blob.len()
+                    );
                     println!("{blob}");
                 } else {
                     print!("{blob}");
@@ -1155,7 +1188,10 @@ mod tests {
         ] {
             assert_eq!(TailKind::from_cli_label(k.label()), Some(k));
         }
-        assert_eq!(TailKind::from_cli_label("logging_message"), Some(TailKind::Log));
+        assert_eq!(
+            TailKind::from_cli_label("logging_message"),
+            Some(TailKind::Log)
+        );
         assert_eq!(TailKind::from_cli_label("bogus"), None);
     }
 
