@@ -16,25 +16,29 @@ Agent (Claude Code / Cursor / any shell tool user)
 - **Introspection**: `mcpctl introspect <server> --json` returns tools + prompts + resources in one round-trip, giving the agent a full capability map before deciding what to call
 - **Invocation**: `mcpctl <server>/<tool> --args-json '...'` invokes any tool with a single shell command — no SDK, no handshake boilerplate
 - **Machine-readable output**: `--json` on any command returns structured JSON; errors go to stderr as `{"error":"...","code":N}` so agents can parse and branch without string matching
-- **Config reuse**: reads existing Claude Code, Claude Desktop, and Cursor configs — zero extra setup for the agent
+- **Config reuse**: reads existing Claude Code, Claude Desktop, Cursor, Windsurf, Gemini CLI, Zed, and Codex configs — zero extra setup for the agent
 
 ## Install
 
-**Prebuilt binary** (macOS arm64 / macOS x86_64 / Linux x86_64):
+**macOS (Homebrew)**:
 
 ```bash
-# replace <VERSION> and <TARGET> (e.g. aarch64-apple-darwin)
-curl -L https://github.com/<owner>/mcpctl/releases/download/v<VERSION>/mcpctl-<VERSION>-<TARGET>.tar.gz \
+brew install agent-rt/tap/mcpctl
+```
+
+**Linux / macOS (prebuilt binary)**:
+
+```bash
+# replace <VERSION> and <TARGET> (e.g. aarch64-apple-darwin, x86_64-unknown-linux-gnu)
+curl -L https://github.com/agent-rt/mcpctl/releases/download/v<VERSION>/mcpctl-<VERSION>-<TARGET>.tar.gz \
   | tar -xz --strip-components=1 -C /usr/local/bin mcpctl-<VERSION>-<TARGET>/mcpctl
 ```
 
-**From source**:
+**From source** (Rust 1.75+):
 
 ```bash
 cargo install --path .
 ```
-
-Requires Rust 1.75+.
 
 ## Quick start (agent perspective)
 
@@ -149,10 +153,16 @@ mcpctl config sources               # show discovered config paths
 
 ## Config sources (priority order)
 
-1. `~/.config/mcpctl/mcp.json` — mcpctl's own writable config (highest priority)
-2. `~/.claude.json` — Claude Code
-3. `~/Library/Application Support/Claude/claude_desktop_config.json` — Claude Desktop (macOS)
-4. `~/.cursor/mcp.json` — Cursor
+| Priority | Source | Path |
+|----------|--------|------|
+| 1 | mcpctl (writable) | `~/.config/mcpctl/mcp.json` |
+| 2 | Claude Code | `~/.claude.json` |
+| 3 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
+| 4 | Cursor | `~/.cursor/mcp.json` |
+| 5 | Windsurf | `~/.codeium/windsurf/mcp_config.json` |
+| 6 | Gemini CLI | `~/.gemini/settings.json` |
+| 7 | Zed | `~/Library/Application Support/Zed/settings.json` (macOS) |
+| 8 | Codex | `~/.codex/config.toml` (TOML format) |
 
 On first run, if `~/.config/cmcp/mcp.json` exists (old name), it is silently migrated to `~/.config/mcpctl/mcp.json`.
 
