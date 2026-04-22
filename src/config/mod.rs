@@ -34,6 +34,7 @@ pub enum ConfigSource {
     Windsurf,
     Gemini,
     Zed,
+    Codex,
 }
 
 impl ConfigSource {
@@ -46,6 +47,7 @@ impl ConfigSource {
             ConfigSource::Windsurf => 4,
             ConfigSource::Gemini => 5,
             ConfigSource::Zed => 6,
+            ConfigSource::Codex => 7,
         }
     }
 
@@ -58,6 +60,7 @@ impl ConfigSource {
             ConfigSource::Windsurf => "windsurf",
             ConfigSource::Gemini => "gemini",
             ConfigSource::Zed => "zed",
+            ConfigSource::Codex => "codex",
         }
     }
 
@@ -108,6 +111,30 @@ pub struct DiscoveredSource {
 ///
 /// Agents use slightly different JSON shapes; we parse each and normalize into
 /// [`McpServerConfig`]. Unknown fields are ignored to stay forward compatible.
+
+/// Codex uses TOML at `~/.codex/config.toml` with `mcp_servers` (snake_case).
+#[derive(Deserialize, Default)]
+struct CodexConfig {
+    #[serde(default)]
+    mcp_servers: BTreeMap<String, CodexMcpServer>,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum CodexMcpServer {
+    Http {
+        url: String,
+        #[serde(default)]
+        headers: BTreeMap<String, String>,
+    },
+    Stdio {
+        command: String,
+        #[serde(default)]
+        args: Vec<String>,
+        #[serde(default)]
+        env: BTreeMap<String, String>,
+    },
+}
 
 /// Zed uses `context_servers` with a different shape.
 #[derive(Deserialize, Default)]
@@ -209,6 +236,7 @@ pub fn discovered_sources() -> Result<Vec<DiscoveredSource>> {
         (ConfigSource::Windsurf, home.join(".codeium/windsurf/mcp_config.json")),
         (ConfigSource::Gemini, home.join(".gemini/settings.json")),
         (ConfigSource::Zed, zed_settings_path(&home)),
+        (ConfigSource::Codex, home.join(".codex/config.toml")),
     ];
     Ok(entries
         .into_iter()
@@ -344,6 +372,9 @@ fn parse_source(source: ConfigSource, path: &Path) -> Result<Vec<McpServerConfig
     if source == ConfigSource::Zed {
         return parse_zed_source(path, &bytes);
     }
+    if source == ConfigSource::Codex {
+        return parse_codex_source(path, &bytes);
+    }
 
     let raw: BTreeMap<String, RawServer> = serde_json::from_slice::<McpConfigRoot>(&bytes)
         .map_err(|e| ConfigError::Parse {
@@ -385,6 +416,36 @@ fn parse_zed_source(path: &Path, bytes: &[u8]) -> Result<Vec<McpServerConfig>> {
                     env: s.env,
                 },
             })
+        })
+        .collect())
+}
+
+fn parse_codex_source(path: &Path, bytes: &[u8]) -> Result<Vec<McpServerConfig>> {
+    let text = std::str::from_utf8(bytes).map_err(|e| ConfigError::Read {
+        path: path.to_path_buf(),
+        source: std::io::Error::new(std::io::ErrorKind::InvalidData, e),
+    })?;
+    let cfg: CodexConfig = toml::from_str(text).map_err(|e| ConfigError::ParseToml {
+        path: path.to_path_buf(),
+        source: e,
+    })?;
+
+    Ok(cfg
+        .mcp_servers
+        .into_iter()
+        .map(|(name, srv)| {
+            let transport = match srv {
+                CodexMcpServer::Http { url, headers } => McpTransport::Http { url, headers },
+                CodexMcpServer::Stdio { command, args, env } => {
+                    McpTransport::Stdio { command, args, env }
+                }
+            };
+            McpServerConfig {
+                id: ServerId(name),
+                source: ConfigSource::Codex,
+                source_path: path.to_path_buf(),
+                transport,
+            }
         })
         .collect())
 }

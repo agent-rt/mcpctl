@@ -61,6 +61,13 @@ pub enum ConfigError {
         source: serde_json::Error,
     },
 
+    #[error("failed to parse {path}: {source}")]
+    ParseToml {
+        path: PathBuf,
+        #[source]
+        source: toml::de::Error,
+    },
+
     #[error("home directory not found")]
     NoHomeDir,
 }
