@@ -111,7 +111,6 @@ pub struct DiscoveredSource {
 ///
 /// Agents use slightly different JSON shapes; we parse each and normalize into
 /// [`McpServerConfig`]. Unknown fields are ignored to stay forward compatible.
-
 /// Codex uses TOML at `~/.codex/config.toml` with `mcp_servers` (snake_case).
 #[derive(Deserialize, Default)]
 struct CodexConfig {

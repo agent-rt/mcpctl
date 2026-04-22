@@ -693,6 +693,7 @@ fn format_local_ts(t: std::time::SystemTime) -> String {
 // Single-session dump: server transport + tool list (with schemas or
 // signatures). TSV mode emits one line per tool so it composes with awk.
 
+#[allow(clippy::too_many_arguments)]
 pub fn print_introspect(
     server: &str,
     cfg: &McpServerConfig,
